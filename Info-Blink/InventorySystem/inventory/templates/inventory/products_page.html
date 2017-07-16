@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prodcuts Page</title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container-fluid">
+<div class="row">
+
+    <div class="col-md-12">
+<a href="{%url 'inventory:invoices_page'%}"> invoices_page</a> <br>
+<a href="{%url 'inventory:payments_page'%}"> payments_page</a> <br><br><br>
+</div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10"></div>
+        <div class="dol-md-2">
+            <a href="{%url 'inventory:new_product'%}">New Product</a>
+        </div>
+    </div>
+<div class="row">
+    <div class="col-sm-1"></div>
+    <div class="col-md-10">
+{% if products%}
+
+        <table class="table table-striped">
+            <tr>
+
+                <td>Code </td>
+                <td>Barcode</td>
+                <td>Name </td>
+                <td>Description </td>
+                <td>Category</td>
+                <td>Expire Date</td>
+                <td>Unit Price</td>
+                <td>Qt in Stock</td>
+                <td>QT on Hold</td>
+                <td>Action</td>
+            </tr>
+            {%for product in products%}
+            <tr>
+                <td> {{product.product_code}} </td>
+                <td>{{product.barcode}} </td>
+                <td> <a href="/sales/products/{{product.id}}">{{product.name}}</a> </td>
+                <td>{{product.description}} </td>
+                <td>{{product.category}} </td>
+                <td>{{product.expire_date}} </td>
+                <td>{{product.unit_price}} </td>
+                <td>{{product.quantity_in_stock}} </td>
+                <td>{{product.quantity_on_hold}} </td>
+                <td> <a href="/sales/updateproduct/{{product.id}}"> update </a> </td>
+            </tr>
+            {%endfor%}
+            </table>
+
+{%else%} products isn't sent
+{%endif%}
+    </div>
+</div>
+
+
+</div>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoices </title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+<body>
+<div class="container-fluid">
+
+<div class="row">
+
+    <div class="col-md-12">
+<a href="{%url 'inventory:products_page'%}"> Products page</a> <br>
+<a href="{%url 'inventory:payments_page'%}"> payments page</a> <br><br><br>
+</div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10"></div>
+        <div class="dol-md-2">
+            <a href="{%url 'inventory:new_invoice'%}">New Invoice</a>
+        </div>
+    </div>
+
+<div class="row">
+<div class="col-md-1"></div>
+<div class="col-md-10">
+    <table class="table table-striped">
+    <tr>
+        <td>Invoice Number</td>
+        <td>Customer</td>
+        <td>Agent</td>
+        <td>Amount</td>
+        <td>Status</td>
+    </tr>
+    <tr>
+    {%for invoice in invoices%}
+        <td><a href="/sales/invoice/{{invoice.id}}">{{invoice.invoice_number}}</a></td>
+        <td>{{invoice.customer}}</td>
+        <td>{{invoice.agent}}</td>
+        <td>{{invoice.amount}}</td>
+        <td>{{invoice.status}}</td>
+
+    </tr>
+        {%endfor%}
+    </table>
+</div>
+</div>
+</div>
+</body>
+</html>

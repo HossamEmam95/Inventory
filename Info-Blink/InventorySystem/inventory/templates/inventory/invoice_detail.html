@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice Detail</title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+
+
+
+
+<body><br>
+<div class="container-fluid">
+<div class="row">
+
+    <div class="col-md-12">
+<a href="{%url 'inventory:invoices_page'%}"> invoices page</a> <br>
+<a href="{%url 'inventory:products_page'%}"> Products page</a> <br>
+<a href="{%url 'inventory:payments_page'%}"> payments page</a> <br><br><br>
+</div>
+    </div>
+
+
+<div class="col-sm-1"></div>
+<div class="col-md-10">
+    <b>Invoice Detail</b>  <br>
+    <table class="table table-striped">
+        <tr><td> Invoice Number</td>
+            <td> Customer</td>
+            <td>Agent</td>
+            <td>Amount</td>
+            <td>Remaining</td>
+            <td>Date</td>
+            <td>Due Date</td>
+            <td>Discount</td>
+            <td>Type</td>
+            <td>Status</td>
+
+        </tr>
+
+   <tr>
+
+    <td>{{object.invoice_number}}</td>
+    <td>{{object.customer}}</td>
+    <td>{{object.agent}}</td>
+    <td>{{object.amount}}</td>
+    <td>{{object.remaining}}</td>
+
+    <td>{{object.date}}</td>
+    <td>{{object.invoice_due_date}}</td>
+    <td>{{object.discount}}</td>
+    <td>{{object.type}}</td>
+    <td>{{object.status}}</td>
+
+
+</tr>
+
+    </table>
+
+    <b>Products</b>
+    <table class="table table-striped">
+
+
+        <tr>
+            <td> Prodocut Name</td>
+            <td>Product Description</td>
+            <td>Unit Price</td>
+            <td>Discount</td>
+            <td>Qt sold</td>
+
+        </tr>
+      {%for detail in object.parent_invoice.all %}
+        <tr>
+    <td>{{detail.product.name}}</td>
+    <td>{{detail.product_description}}</td>
+        <td>{{detail.product.unit_price}}</td>
+            <td>{{detail.product.discount}}%</td>
+        <td>{{detail.quantity_sold}}</td>
+    </tr>
+        {% endfor %}
+    </table>
+</div>
+</div>
+</body>
+</html>

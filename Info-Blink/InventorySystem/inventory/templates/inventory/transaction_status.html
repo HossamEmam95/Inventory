@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transuction_Status</title>
+            <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+<body>
+
+<div class="container-fluid">
+<div class="row">
+
+    <div class="col-md-12">
+<a href="{%url 'inventory:invoices_page'%}"> invoices_page</a> <br>
+<a href="{%url 'inventory:payments_page'%}"> payments_page</a> <br><br><br>
+</div>
+    </div>
+
+<b>payment detail</b><br>
+<div class="row">
+    <div class="col-sm-1"></div>
+    <div class="col-md-10">
+            <table class="table table-striped">
+                <tr>
+                    <td>Number</td>
+                    <td>Amount</td>
+                    <td>Remaining</td>
+                    <td>Agent</td>
+                </tr>
+                <tr>
+                    <td>{{payment.payment_number}}</td>
+                    <td>{{payment.amount}}</td>
+                    <td>{{payment.remaining}}</td>
+                    <td>{{payment.agent}}</td>
+                </tr>
+            </table>
+    </div>
+</div>
+<b>Invoices</b><br>
+<div class="row">
+    <div class="col-sm-1"></div>
+    <div class="col-md-10">
+            <table class="table table-striped">
+                {%if payment_details%}
+                    <tr>
+                        <td>Invoice</td>
+                        <td>Amount</td>
+                        <td>Remaining</td>
+                        <td>Amount Paid</td>
+                        <td>Status</td>
+
+                    </tr>
+                    {%for detail in payment_details%}
+                        <tr>
+                            <td>{{detail.invoice.invoice_number}}</td>
+                            <td>{{detail.invoice.amount}}</td>
+                            <td>{{detail.invoice.remaining}}</td>
+                            <td>{{detail.amount}}</td>
+                            <td>{{detail.invoice.status}}</td>
+                        </tr>
+                    {%endfor%}
+                {%else%}
+No open Invoices to be paid .. payment is add to your balance
+{%endif%}
+                </table>
+    </div>
+</div>
+
+<b>Customer Details</b><br>
+<div class="row">
+    <div class="col-sm-1"></div>
+    <div class="col-md-10">
+            <table class="table table-striped">
+                <tr>
+                    <td>Name</td>
+                    <td>Current Balance</td>
+                    <td>Credit Limit</td>
+                </tr>
+                <tr>
+                    <td>{{customer.name}}</td>
+                    <td>{{customer.balance}}</td>
+                    <td>{{customer.credit_limit}}</td>
+                </tr>
+            </table>
+    </div>
+    </div>
+</div>
+</body>
+</html>
