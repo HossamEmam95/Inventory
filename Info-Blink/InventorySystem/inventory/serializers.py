@@ -1,7 +1,8 @@
 from decimal import Decimal
 from rest_framework import serializers
 from inventory.models import Customer, Agent, Category, \
-    Products, Invoices, InvoiceDetail, Payments, PaymentDetail
+    Products, Invoices, InvoiceDetail, Payments,\
+    PaymentDetail, Type, Status
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -44,6 +45,10 @@ class InvoiceDetailsSerializer(serializers.ModelSerializer):
 
 class InvoiceSerializer(serializers.ModelSerializer):
     product_data = serializers.DictField(write_only=True)
+    type = serializers.ChoiceField(choices=Type, default='Credit', read_only=True)
+    status = serializers.ChoiceField(choices=Status, default='Open', read_only=True)
+    amount = serializers.DecimalField(max_digits=9, decimal_places=2, read_only=True)
+    remaining = serializers.DecimalField(max_digits=9, decimal_places=2, read_only=True)
 
     class Meta:
         model = Invoices

@@ -140,3 +140,6 @@ class TestingPayments(APITestCase):
 
         response = self.client.get('/sales/agentapi/paymentdetail/3/')
         self.assertEquals(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+

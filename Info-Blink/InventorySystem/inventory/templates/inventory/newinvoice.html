@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Invoice</title>
+     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+
+</head>
+<body>
+
+<div class="col-md-6">
+    <form class="form-inline" method="post" action="">
+        {% csrf_token%}
+        {{ invoice_form }}<br><br>
+    <table class="table">
+        {{ detail_form }}
+        <input type="submit" value="Save"/> <a href="{% url 'inventory:invoices_page' %}">back to the list</a>
+    </form>
+</div>
+
+{%load static%}
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="{% static 'jquery.formset.js' %}"></script>
+<script type="text/javascript">
+    $('.formset_row').formset({
+        addText: 'add new product',
+        deleteText: 'remove',
+        prefix: 'parent_invoice'
+    });
+</script>
+
+</body>
+</html>

@@ -88,7 +88,7 @@ class Invoices(models.Model):
     amount = models.DecimalField(max_digits=9, decimal_places=2, null=True)
     discount = models.IntegerField()
     status = models.CharField(max_length=100, choices=Status, default='Open')
-    type = models.CharField(max_length=100, choices=Type)
+    type = models.CharField(max_length=100, choices=Type, default='Credit')
     remaining = models.DecimalField(max_digits=9, decimal_places=2, null=True)
     products = models.ManyToManyField('Products', through='InvoiceDetail')
 

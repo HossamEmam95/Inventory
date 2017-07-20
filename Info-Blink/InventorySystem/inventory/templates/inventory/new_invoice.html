@@ -27,6 +27,8 @@
                 </tr>
                 </thead>
                         <tr class="formset_row">
+                    {{ detail_form.non_form_errors }}
+
                     {% for field in form.visible_fields %}
                         <td>
                             {# Include the hidden fields in the form #}
@@ -35,7 +37,6 @@
                                     {{ hidden }}
                                 {% endfor %}
                             {% endif %}
-                            {{ field.errors.as_ul }}
                             {{ field }}
                         </td>
                     {% endfor %}

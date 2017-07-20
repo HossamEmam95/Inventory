@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cash Payment</title>
+</head>
+<body>
+
+ <form class="form-inline" method="post" action="">
+     {% csrf_token%}
+     {{payment_form}}
+     <button value="Pay" type="submit">Pay</button>
+     </form>
+
+</body>
+</html>

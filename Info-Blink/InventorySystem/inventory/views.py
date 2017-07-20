@@ -1,14 +1,16 @@
 from decimal import Decimal
-from django.http import HttpResponse
+
+from django.http import HttpResponse, HttpResponseRedirect
 from django.views import View
 from django.views.generic.edit import CreateView, UpdateView
 from django.views.generic.detail import DetailView
 from django.shortcuts import render
 from .models import Products, Invoices,\
-    InvoiceDetail, Payments, Customer, PaymentDetail
-from .forms import UpdateProductForm, NewInvoiceForm
+    Payments, Customer, PaymentDetail
+from .forms import UpdateProductForm, InvoiceForm, DetailFormset, \
+    CashPaymentForm
 from django.core.urlresolvers import reverse_lazy, reverse
-from django.forms import modelformset_factory, inlineformset_factory
+
 
 class ProductView(View):
     products = Products.objects.order_by('name')
@@ -57,72 +59,61 @@ class InvoiceDetailView(DetailView):
     template_name = 'inventory/invoice_detail.html'
 
 
-def manage_invoices(request):
-    # creating FormSets
-    InvoiceFormSet = modelformset_factory(Invoices, exclude=[
-        'amount', 'remaining', 'products',
-        'status'])
-    DetailFromSet = inlineformset_factory(Invoices,
-                                          InvoiceDetail,
-                                          exclude=['product_price',
-                                                   'product_description'],
-                                          form=NewInvoiceForm, extra=1)
+def create_invoice(request):
+    '''
+    This function is used to crate the invoices, it create the form then the
+    fomsets, calcutlate the amount and check if this amount is bigger than the
+    credit    limit after the invoice ceation it update the customer balance
+    and the product in stock.'''
 
-    # saving the Invoice with it's Products
     if request.method == 'POST':
-        invoice_formset = InvoiceFormSet(request.POST, request.FILES,
-                                         queryset=Invoices.objects)
-        detail_formset = DetailFromSet(request.POST, request.FILES)
-        if invoice_formset.is_valid() and detail_formset.is_valid():
+        invoice_form = InvoiceForm(request.POST, request.FILES)
+        detail_formset = DetailFormset(request.POST, request.FILES)
+
+        if invoice_form.is_valid() and detail_formset.is_valid():
             amount = 0
-            invoice = invoice_formset.save()
-            # loop on the products formsets and assigning
-            # the price and description for Products table then caclualte the
-            # amount
+            invoice = invoice_form.save(commit=False)
             for form in detail_formset:
                 detail = form.save(commit=False)
-                detail.invoice = invoice[0]
                 product = Products.objects.get(id=detail.product_id)
-                detail.product_price = product.unit_price
-                detail.product_description = product.description
-                amount += float(detail.product_price * detail.quantity_sold)
-                amount *= float(amount * (1 - (product.discount / 100)))
-                form.save()
-            amount *= Decimal((1 - (invoice[0].discount / 100)))
-            invoice[0].amount = amount
-            invoice[0].remaining = amount
-            invoice_formset.save()
+                amount += Decimal(product.unit_price * detail.quantity_sold)\
+                          * (1 - (product.discount / 100))
+            amount *= Decimal((1 - (invoice.discount / 100)))
 
-            # updating Customer Balance And Invoice Remaining
-            customer = Customer.objects.get(id=invoice[0].customer_id)
-            current_invoice = Invoices.objects.get(id=invoice[0].id)
-            customer.balance -= current_invoice.amount
+            if invoice_form.valid_amount(invoice, amount):
+                invoice.amount = amount
+                invoice.remaining = amount
+                invoice = invoice_form.save()
 
-            # checking the cridit limit
-            if (customer.credit_limit + customer.balance) < 0:
-                current_invoice.delete()
-                return HttpResponse("Ur invoice exceeds ur credit limit")
-            # checking customer max discount
-            elif customer.max_discount < current_invoice.discount:
-                current_invoice.delete()
-                return HttpResponse('u the invoice discount exceed the'
-                                    ' allowed cusomter discount')
-            # checking agent max discount
-            elif current_invoice.agent.max_discount < current_invoice.discount:
-                current_invoice.delete()
-                return HttpResponse('u the invoice discount exceed '
-                                    'the allowed agent discount')
-            else:
+                for form in detail_formset:
+                    detail = form.save(commit=False)
+                    detail.invoice = invoice
+                    product = Products.objects.get(id=detail.product_id)
+                    detail.product_price = product.unit_price
+                    detail.product_description = product.description
+                    amount += (Decimal(detail.product_price) * detail.quantity_sold) * \
+                              (1 - (product.discount / 100))
+                    form.save()
+
+                    product.quantity_in_stock -= detail.quantity_sold
+                    product.save()
+
+                # updating Customer Balance
+                customer = Customer.objects.get(id=invoice.customer_id)
+                current_invoice = Invoices.objects.get(id=invoice.id)
+                customer.balance -= current_invoice.amount
                 customer.save()
+                if invoice.type == 'Credit':
+                    return HttpResponseRedirect(reverse('inventory:invoices_page'))
+                else:
+                    return HttpResponseRedirect(reverse('inventory:cash_payment', args=(invoice.id,)))
 
     else:
-        invoice_formset = InvoiceFormSet(
-            queryset=Invoices.objects.filter(invoice_number=0))
-        detail_formset = DetailFromSet(
-            queryset=InvoiceDetail.objects.filter(invoice=0))
+        invoice_form = InvoiceForm()
+        detail_formset = DetailFormset()
 
     return render(request, 'inventory/new_invoice.html',
-                  {'invoice_form': invoice_formset,
+                  {'invoice_form': invoice_form,
                    'detail_form': detail_formset})
 
 
@@ -134,7 +125,10 @@ class PaymentsView(View):
         return render(request, 'inventory/payments.html', self.context)
 
 
-class CreatePayment(CreateView):
+class CreateCreditPayment(CreateView):
+    """ Payment creation takes place here then
+    send the id to transation function"""
+
     template_name = "inventory/new_payment.html"
     success_url = reverse_lazy('inventory:payments_page')
     model = Payments
@@ -145,58 +139,63 @@ class CreatePayment(CreateView):
 
 
 def transaction(request, pk):
+    """
+    after payment creation the payment id is sent here where it get all the
+    customer invoices and loop on them. pay the partial and open invoices
+    by date then return the remainig of the payment if found and
+    update the customer balance and the invoices status
+    """
+
     payment = Payments.objects.get(id=pk)
     customer = Customer.objects.get(id=payment.customer_id)
     invoices = Invoices.objects.filter(customer=payment.customer_id)
     money = payment.amount
-    flag = 0
     if not payment.used:
         for invoice in invoices:
             if money == 0:
                 break
-            print(invoice.status)
-            if invoice.status == 'Closed':
+            if invoice.status == "Closed":
                 continue
             if money >= invoice.remaining:
                 money -= invoice.remaining
-                detail = PaymentDetail(
+                payment_detail = PaymentDetail.objects.create(
                     payment=payment,
                     invoice=invoice,
-                    amount=invoice.remaining)
-                detail.save()
-                if flag == 0:
-                    customer.balance += invoice.remaining
-                    # customer.balance += money
+                    amount=invoice.remaining
+                )
+                payment_detail.save()
+                customer.balance += invoice.remaining
                 customer.save()
+
                 invoice.remaining = 0
-                invoice.status = 'Closed'
+                invoice.status = "Closed"
                 invoice.save()
+
                 payment.used = True
                 payment.save()
-                flag = 1
+
             else:
                 invoice.remaining -= money
-                detail = PaymentDetail(
-                    payment=payment, invoice=invoice, amount=money)
-                detail.save()
-                print(customer.balance)
-                if flag == 0:
-                    customer.balance += money
-                print(customer.balance)
+                payment_detail = PaymentDetail.objects.create(
+                    payment=payment,
+                    invoice=invoice,
+                    amount=money
+                )
+                payment_detail.save()
+
+                customer.balance += money
                 customer.save()
-                money = 0
-                invoice.status = 'Partial'
+
+                invoice.status = "Partial"
                 invoice.save()
+
+                money = 0
+
                 payment.used = True
                 payment.save()
 
         payment.remaining += money
         payment.save()
-    # if payment.used == False:
-    #     customer.balance += money
-    #     customer.save()
-    #     payment.used = True
-    #     payment.save()
 
     payment_details = PaymentDetail.objects.filter(payment=payment)
     context = {'payment': payment,
@@ -205,19 +204,54 @@ def transaction(request, pk):
     return render(request, 'inventory/transaction_status.html', context=context)
 
 
-# if customer.balance >= current_invoice.amount:
-    #     current_invoice.remaining = 0
-    #     customer.balance -= current_invoice.amount
-    #     current_invoice.status = 'Closed'
-    #     customer.save()
-    #     current_invoice.save()
-    # else:
-    #     if customer.balance <= 0:
-    #         current_invoice.status = 'Open'
-    #         current_invoice.remaining = current_invoice.amount
-    #     else:
-    #         current_invoice.remaining = current_invoice.amount - customer.balance
-    #         current_invoice.status = 'Partial'
-    #     customer.balance -= current_invoice.amount
-    #     customer.save()
-    #     current_invoice.save()
+def cash_payment(request, pk):
+    invoice = Invoices.objects.get(id=pk)
+
+    if request.method == 'POST':
+        payment_form = CashPaymentForm(invoice=invoice, data=request.POST)
+
+        if payment_form.is_valid():
+            customer = Customer.objects.get(id=invoice.customer_id)
+            payment = payment_form.save(commit=False)
+
+            payment.customer = customer
+            payment.agent = invoice.agent
+            payment.save()
+
+            payment_detail = PaymentDetail.objects.create(
+                payment=payment,
+                invoice=invoice,
+                amount=invoice.remaining
+            )
+            payment_detail.save()
+            customer.balance += invoice.remaining
+            customer.save()
+            payment.remaining = payment.amount - invoice.remaining
+            payment.save()
+            invoice.remaining = 0
+            invoice.status = "Closed"
+            invoice.save()
+
+            return HttpResponseRedirect(reverse(
+                'inventory:cash_transaction',
+                args=(payment_detail.id,)))
+
+    else:
+        payment_form = CashPaymentForm(invoice=invoice)
+
+    return render(request, 'inventory/cash_payment.html',
+                  {'payment_form': payment_form})
+
+
+def cash_transaction(request, pk):
+    print('here1')
+    payment_detail = PaymentDetail.objects.filter(id=pk)
+    payment = Payments.objects.get(id=payment_detail[0].payment_id)
+    customer = Customer.objects.get(id=payment.customer_id)
+
+    context = {'payment': payment,
+               'payment_details': payment_detail, 'customer': customer}
+
+    return render(request, 'inventory/transaction_status.html',
+                  context=context)
+

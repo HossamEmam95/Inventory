@@ -4,7 +4,7 @@ from . import views, viewsets
 from rest_framework.routers import DefaultRouter
 from .views import ProductView, InvoicesView,\
     PaymentsView, CreateProduct, UpdateProduct,\
-    ProductDetail, InvoiceDetailView, CreatePayment
+    ProductDetail, InvoiceDetailView, CreateCreditPayment
 
 
 router = DefaultRouter()
@@ -30,10 +30,12 @@ urlpatterns = [
         ProductDetail.as_view(), name='product_detail'),
     url(r'invoice/(?P<pk>[0-9]+)/$',
         InvoiceDetailView.as_view(), name='invoice_detail'),
-    url(r'newinvoice/$', views.manage_invoices, name='new_invoice'),
-    url(r'newpayment/$', CreatePayment.as_view(), name='new_payment'),
+    url(r'newinvoice/$', views.create_invoice, name='new_invoice'),
+    url(r'newpayment/$', CreateCreditPayment.as_view(), name='new_payment'),
+url(r'cashtransaction/(?P<pk>[0-9]+)/$',
+        views.cash_transaction, name='cash_transaction'),
     url(r'transaction/(?P<pk>[0-9]+)/$',
         views.transaction, name='transaction'),
-
+    url(r'cashpayment/(?P<pk>[0-9]+)/$', views.cash_payment, name='cash_payment'),
 
 ]
